@@ -2315,7 +2315,7 @@ class HTML5History extends History {
       }
 
       let locations = [location];
-      if (window.history.state.state) {
+      if (window.history.state && window.history.state.state) {
         locations = window.history.state.state;
       }
       this.transitionTo(locations, route => {

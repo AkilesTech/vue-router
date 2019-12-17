@@ -2341,7 +2341,7 @@ var HTML5History = /*@__PURE__*/(function (History$$1) {
       }
 
       var locations = [location];
-      if (window.history.state.state) {
+      if (window.history.state && window.history.state.state) {
         locations = window.history.state.state;
       }
       this$1.transitionTo(locations, function (route) {
