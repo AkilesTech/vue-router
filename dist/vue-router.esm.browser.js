@@ -1,6 +1,6 @@
 /*!
   * vue-router v3.0.7
-  * (c) 2019 Evan You
+  * (c) 2022 Evan You
   * @license MIT
   */
 /*  */
@@ -2419,7 +2419,11 @@ class HashHistory extends History {
       if (!ensureSlash()) {
         return
       }
-      this.transitionTo(getHash(), route => {
+      let locations = [getHash()];
+      if (window.history && window.history.state && typeof window.history.state.state === 'object') {
+        locations = window.history.state.state;
+      }
+      this.transitionTo(locations, route => {
         if (supportsScroll) {
           handleScroll(this.router, route, current, true);
         }
@@ -2430,22 +2434,44 @@ class HashHistory extends History {
     });
   }
 
-  push (location, onComplete, onAbort) {
+  navigateAllLayers (locations, push, onComplete, onAbort) {
     const { current: fromRoute } = this;
-    this.transitionTo(location, route => {
+    this.transitionTo(locations, routes => {
+      const route = this.current[this.current.length - 1];
       pushHash(route.fullPath);
       handleScroll(this.router, route, fromRoute, false);
       onComplete && onComplete(route);
     }, onAbort);
   }
 
-  replace (location, onComplete, onAbort) {
-    const { current: fromRoute } = this;
-    this.transitionTo(location, route => {
-      replaceHash(route.fullPath);
-      handleScroll(this.router, route, fromRoute, false);
-      onComplete && onComplete(route);
-    }, onAbort);
+  navigateLastLayer (location, push, onComplete, onAbort) {
+    const locations = [
+      ...this.current.slice(0, -1).map(r => r.fullPath),
+      location
+    ];
+    this.navigateAllLayers(locations, push, onComplete, onAbort);
+  }
+
+  navigateLayer (layer, location, push, onComplete, onAbort) {
+    const locations = [
+      ...this.current.slice(0, layer).map(r => r.fullPath),
+      location,
+      ...this.current.slice(layer + 1).map(r => r.fullPath)
+    ];
+    this.navigateAllLayers(locations, push, onComplete, onAbort);
+  }
+
+  navigateAddLayer (location, push, onComplete, onAbort) {
+    const locations = [
+      ...this.current.map(r => r.fullPath),
+      location
+    ];
+    this.navigateAllLayers(locations, push, onComplete, onAbort);
+  }
+
+  navigateRemoveLayer (location, push, onComplete, onAbort) {
+    const locations = this.current.slice(0, -1).map(r => r.fullPath);
+    this.navigateAllLayers(locations, push, onComplete, onAbort);
   }
 
   go (n) {
@@ -2453,9 +2479,10 @@ class HashHistory extends History {
   }
 
   ensureURL (push) {
-    const current = this.current.fullPath;
-    if (getHash() !== current) {
-      push ? pushHash(current) : replaceHash(current);
+    const route = this.current[this.current.length - 1];
+    if (getHash() !== route.fullPath) {
+      const path = cleanPath(this.base + route.fullPath);
+      pushState(path, this.current.map(r => r.fullPath), !push);
     }
   }
 
@@ -2701,7 +2728,7 @@ class VueRouter {
         history.setupListeners();
       };
       history.transitionTo(
-        history.getCurrentLocation(),
+        [history.getCurrentLocation()],
         setupHashListener,
         setupHashListener
       );
