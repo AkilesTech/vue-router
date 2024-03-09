@@ -2507,7 +2507,7 @@ var HashHistory = /*@__PURE__*/(function (History$$1) {
   HashHistory.prototype.ensureURL = function ensureURL (push) {
     var route = this.current[this.current.length - 1];
     if (getHash() !== route.fullPath) {
-      var path = cleanPath(this.base + route.fullPath);
+      var path = `${window.location.origin + window.location.pathname}#${cleanPath(route.fullPath)}`;
       pushState(path, this.current.map(function (r) { return r.fullPath; }), !push);
     }
   };
